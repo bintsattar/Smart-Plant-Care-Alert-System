@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "author": "Anonymous maker",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-dht22", "id": "dht1", "top": -86.1, "left": 225, "attrs": {} },
+    {
+      "type": "wokwi-photoresistor-sensor",
+      "id": "ldr1",
+      "top": -44.8,
+      "left": -191.2,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-slide-potentiometer",
+      "id": "pot1",
+      "top": 206.6,
+      "left": -173.8,
+      "attrs": { "travelLength": "30" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:34", "ldr1:AO", "green", [ "h-23.81", "v-67.2" ] ],
+    [ "esp:15", "dht1:SDA", "green", [ "v-144", "h110.44" ] ],
+    [ "esp:35", "pot1:SIG", "green", [ "h-187.01", "v192" ] ],
+    [ "ldr1:VCC", "esp:3V3", "red", [ "h28.8", "v57.6" ] ],
+    [ "dht1:VCC", "esp:3V3", "red", [ "v0", "h-230.4" ] ],
+    [ "pot1:VCC", "esp:3V3", "red", [ "h172.8", "v-220.8" ] ],
+    [ "ldr1:GND", "esp:GND.3", "black", [ "h124.8", "v105.2" ] ],
+    [ "dht1:GND", "esp:GND.2", "black", [ "v0", "h-172.8" ] ],
+    [ "pot1:GND", "esp:GND.1", "black", [ "v-96", "h-33.2" ] ]
+  ],
+  "dependencies": {}
+}
