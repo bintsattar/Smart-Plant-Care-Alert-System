@@ -1,3 +1,5 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
 #include "DHTesp.h"
 
 // Hardware Pins
@@ -5,30 +7,72 @@ const int DHT_PIN = 15;
 const int LDR_PIN = 34;
 const int SOIL_PIN = 35;
 
-// Observed Sensor Limits (From Calibration Run)
-// Soil: 0 (Dry) to 4095 (Wet)
-// Light: 4063 (Dark) to 32 (Bright)
-// Temp: -40C to 80C
+// Calibration Thresholds
 const int SOIL_DRY_THRESHOLD = 1500;   
 const int LIGHT_DARK_THRESHOLD = 3000; 
 const float TEMP_HEAT_THRESHOLD = 35.0; 
 
+// Simulated WiFi Credentials (Wokwi standard)
+const char* ssid = "Wokwi-GUEST";
+const char* password = "";
+
+// Public Test MQTT Broker
+const char* mqtt_server = "broker.hivemq.com";
+const int mqtt_port = 1883;
+
+WiFiClient espClient;
+PubSubClient client(espClient);
 DHTesp dhtSensor;
+
+void setup_wifi() {
+  delay(10);
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected! IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    String clientId = "ESP32PlantClient-";
+    clientId += String(random(0xffff), HEX);
+    
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected to broker!");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
 
 void setup() {
   Serial.begin(115200);
   dhtSensor.setup(DHT_PIN, DHTesp::DHT22);
-  Serial.println("--- ESP32 Smart Plant Monitor Active ---");
+  setup_wifi();
+  client.setServer(mqtt_server, mqtt_port);
 }
 
 void loop() {
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
   TempAndHumidity data = dhtSensor.getTempAndHumidity();
   int ldrVal = analogRead(LDR_PIN);
   int soilVal = analogRead(SOIL_PIN);
 
   String status = "HEALTHY";
-
-  // Evaluated custom condition first
   if (soilVal < SOIL_DRY_THRESHOLD && data.temperature > TEMP_HEAT_THRESHOLD) {
     status = "HEAT_WAVE_DROUGHT_RISK"; 
   } else if (soilVal < SOIL_DRY_THRESHOLD) {
@@ -39,11 +83,14 @@ void loop() {
     status = "TOO_HOT";
   }
 
-  Serial.print("Soil: "); Serial.print(soilVal);
-  Serial.print(" | Light: "); Serial.print(ldrVal);
-  Serial.print(" | Temp: "); Serial.print(data.temperature, 1); Serial.print("C");
-  Serial.print(" | Humidity: "); Serial.print(data.humidity, 1); Serial.print("%");
-  Serial.print(" | STATUS: "); Serial.println(status);
+  // Publish telemetry and state to MQTT topics
+  client.publish("plant/monitor/soil", String(soilVal).c_str());
+  client.publish("plant/monitor/light", String(ldrVal).c_str());
+  client.publish("plant/monitor/temp", String(data.temperature, 1).c_str());
+  client.publish("plant/monitor/status", status.c_str());
 
-  delay(2000);
+  Serial.print("Published payload status: ");
+  Serial.println(status);
+
+  delay(3000);
 }
