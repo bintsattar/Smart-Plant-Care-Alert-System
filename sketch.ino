@@ -11,6 +11,7 @@ const int SOIL_PIN = 35;
 const int SOIL_DRY_THRESHOLD = 1500;   
 const int LIGHT_DARK_THRESHOLD = 3000; 
 const float TEMP_HEAT_THRESHOLD = 35.0; 
+const float TEMP_FREEZE_THRESHOLD = 10.0; // Added Freezing Threshold
 
 // Simulated WiFi Credentials (Wokwi standard)
 const char* ssid = "Wokwi-GUEST";
@@ -75,6 +76,8 @@ void loop() {
   String status = "HEALTHY";
   if (soilVal < SOIL_DRY_THRESHOLD && data.temperature > TEMP_HEAT_THRESHOLD) {
     status = "HEAT_WAVE_DROUGHT_RISK"; 
+  } else if (data.temperature < TEMP_FREEZE_THRESHOLD) {
+    status = "FREEZING"; // Triggers if temperature drops below 10.0 °C
   } else if (soilVal < SOIL_DRY_THRESHOLD) {
     status = "NEEDS_WATER";
   } else if (ldrVal > LIGHT_DARK_THRESHOLD) {
